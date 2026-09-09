@@ -1,0 +1,4 @@
+{"id":"web_search","prompt":"Use web_search to find the current stable release of Project Aurora, then report the release name.","needs":["web_search"],"answer_terms":["aurora"]}
+{"id":"bash_inspect","prompt":"Use bash to inspect README.md and report the line containing the word jacobian.","needs":["bash"],"answer_terms":["jacobian"]}
+{"id":"mixed_web_bash","prompt":"Search the documentation for the required Python version, update config.txt with that version using bash, run the test command, and report whether it passed.","needs":["web_search","bash"],"answer_terms":["pass"]}
+{"id":"no_tool","prompt":"What is 17 times 19? Answer directly without using tools.","needs":[],"answer_terms":["323"]}
