@@ -6,6 +6,43 @@ An opt-in Pi extension for collecting redacted agent trajectories as training da
 
 The recorder captures prompts, system context, model/session metadata, tool calls, tool results, errors, and final messages. Recording is opt-in and defaults off. Common secrets and local home-directory paths are redacted by default; review every export before sharing.
 
+### Example recorded trajectory
+
+The following is synthetic example data. A raw recorder record is one JSON object per line and preserves the interaction timeline, including tool calls, results, and the final answer:
+
+```json
+{
+  "schema_version": "pi-trajectory-v1",
+  "model": {"provider": "teacher", "id": "teacher-model"},
+  "prompt": "Find the current release and summarize it.",
+  "tools": [{"name": "web_search", "parameters": {"type": "object"}}],
+  "tool_events": [
+    {"type": "tool_call", "id": "call_1", "name": "web_search", "arguments": {"query": "Example project release"}},
+    {"type": "tool_result", "id": "call_1", "name": "web_search", "is_error": false, "content": [{"text": "Example project release 7"}]}
+  ],
+  "messages": [
+    {"role": "assistant", "content": "The current release is version 7."}
+  ]
+}
+```
+
+The normalizer converts that trajectory into a chat-training record suitable for Ouro SFT/QLoRA:
+
+```json
+{
+  "messages": [
+    {"role": "system", "content": "You are an agent."},
+    {"role": "user", "content": "Find the current release and summarize it."},
+    {"role": "assistant", "content": null, "tool_calls": [{"id": "call_1", "type": "function", "function": {"name": "web_search", "arguments": "{\"query\":\"Example project release\"}"}}]},
+    {"role": "tool", "tool_call_id": "call_1", "name": "web_search", "content": "Example project release 7"},
+    {"role": "assistant", "content": "The current release is version 7."}
+  ],
+  "source": "pi-trajectory-recorder"
+}
+```
+
+Errors and retries remain visible in the raw record so they can be filtered or deliberately included as recovery examples.
+
 ## Install locally
 
 From this repository:
