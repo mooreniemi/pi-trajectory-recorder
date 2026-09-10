@@ -52,12 +52,8 @@ JLENS_ROOT=/path/to/jacobian-lens \
 bash scripts/train_ouro.sh outputs/ouro-train.jsonl outputs/ouro-adapter
 ```
 
-## Milestones
+## Results and milestones
 
-Send a readable result table through Moneypenny with:
-
-```bash
-bash scripts/notify_milestone.sh "Pi teacher benchmark" "Model | Task success\nQwen | 80%"
-```
+The benchmark runner writes a machine-readable JSON summary to `outputs/`. Review or format that file with your preferred notification system; this repository does not depend on any host-specific messaging tool.
 
 This project intentionally does not upload traces automatically. Treat traces as sensitive: review and redact every export before publishing, because application-specific secrets or personal data may use formats the built-in redactor cannot recognize.
