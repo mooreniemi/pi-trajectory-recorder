@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Convert recorder JSONL into Ouro/Pi SFT JSONL."""
+"""Convert recorder JSONL into chat-style SFT JSONL."""
 import argparse, json
 from pathlib import Path
 

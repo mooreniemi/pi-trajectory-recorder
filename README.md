@@ -1,6 +1,6 @@
 # Pi Trajectory Recorder
 
-An opt-in Pi extension for collecting redacted agent trajectories as training data, plus repeatable tool-use benchmarks. It is designed for teacher-trace collection (for example, Qwen in Pi) and downstream Ouro SFT/QLoRA.
+An opt-in Pi extension for collecting redacted agent trajectories as training data, plus repeatable tool-use benchmarks. It is designed for collecting high-quality agent trajectories from one configured model and using them to train or evaluate another model with SFT/QLoRA.
 
 ## What it records
 
@@ -13,7 +13,7 @@ The following is synthetic example data. A raw recorder record is one JSON objec
 ```json
 {
   "schema_version": "pi-trajectory-v1",
-  "model": {"provider": "teacher", "id": "teacher-model"},
+  "model": {"provider": "model-provider", "id": "source-model"},
   "prompt": "Find the current release and summarize it.",
   "tools": [{"name": "web_search", "parameters": {"type": "object"}}],
   "tool_events": [
@@ -26,7 +26,7 @@ The following is synthetic example data. A raw recorder record is one JSON objec
 }
 ```
 
-The normalizer converts that trajectory into a chat-training record suitable for Ouro SFT/QLoRA:
+The normalizer converts that trajectory into a chat-training record suitable for SFT/QLoRA training. Ouro is one example target model; the format is not Ouro-specific:
 
 ```json
 {
@@ -45,13 +45,13 @@ Errors and retries remain visible in the raw record so they can be filtered or d
 
 ## End-to-end workflow
 
-The training data is produced by running an evaluation or task dataset through Pi with a capable teacher model. The dataset supplies realistic prompts; Pi supplies the tool environment; and this extension records what actually happened. The recorder does not invent tool calls or turn static answers into trajectories.
+The training data is produced by running an evaluation or task dataset through Pi with a configured source model. The dataset supplies realistic prompts; Pi supplies the tool environment; and this extension records what actually happened. The recorder does not invent tool calls or turn static answers into trajectories.
 
 ```text
 eval/task prompts
         │
         ▼
-Pi + teacher model + configured tools
+Pi + source model + configured tools
         │  model chooses tools, receives results, retries, answers
         ▼
 redacted trajectories.jsonl
@@ -59,13 +59,13 @@ redacted trajectories.jsonl
         ├─ review_traces.py       inspect/filter/label successes and failures
         ├─ normalize_traces.py    convert approved traces to chat JSONL
         ▼
-Ouro SFT/QLoRA training
+target-model SFT/QLoRA training
         │
         ▼
 Pi/tool-use benchmark: base vs trained model
 ```
 
-A typical experiment is: (1) run the benchmark prompts with a teacher such as Qwen in Pi, (2) review the resulting traces and remove private or undesirable examples, (3) export the approved traces as training data, (4) train an Ouro adapter, and (5) rerun a held-out benchmark to measure tool selection, argument validity, sequencing, recovery, and final task success. The benchmark runner in this repository is a prompt-and-trace harness; the configured Pi tools and task fixtures determine how realistic and reproducible the resulting evaluation is.
+A typical experiment is: (1) run benchmark prompts with a source model in Pi, (2) review the resulting traces and remove private or undesirable examples, (3) export the approved traces as training data, (4) train an adapter for the target model, and (5) rerun a held-out benchmark to measure tool selection, argument validity, sequencing, recovery, and final task success. The benchmark runner in this repository is a prompt-and-trace harness; the configured Pi tools and task fixtures determine how realistic and reproducible the resulting evaluation is.
 
 ## Install locally
 
@@ -76,7 +76,7 @@ cd pi-trajectory-recorder
 npm install
 PI_TRAJECTORY_RECORD=1 \
 PI_TRAJECTORY_DIR=$PWD/traces \
-pi --extension $PWD/extension/trajectory-recorder.ts --model ouro-local/ouro-2.6b-thinking
+pi --extension $PWD/extension/trajectory-recorder.ts --model provider/model-id
 ```
 
 Use `/trace-status` and `/trace-record` in Pi. Records are written to `traces/trajectories.jsonl`.
@@ -85,9 +85,9 @@ Use `/trace-status` and `/trace-record` in Pi. Records are written to `traces/tr
 
 ```bash
 python3 scripts/run_benchmarks.py \
-  --model qwen3.6-27b \
-  --record-dir traces/qwen-teacher \
-  --out outputs/qwen-teacher.json
+  --model provider/model-id \
+  --record-dir traces/source-model \
+  --out outputs/source-model.json
 ```
 
 The benchmark deliberately includes web, Bash, mixed web→Bash, and no-tool tasks. It is a prompt-and-trace harness: the model must run through Pi and the recorder captures the trajectory.
@@ -95,22 +95,23 @@ The benchmark deliberately includes web, Bash, mixed web→Bash, and no-tool tas
 ## Review and filter
 
 ```bash
-python3 scripts/review_traces.py traces/qwen-teacher/trajectories.jsonl \
+python3 scripts/review_traces.py traces/source-model/trajectories.jsonl \
   --successful-only --min-tools 1 \
-  --label qwen-teacher-v1 \
+  --label source-model-v1 \
   --output outputs/reviewed.jsonl
 ```
 
-## Export for Ouro
+## Export for training
 
 ```bash
 python3 scripts/normalize_traces.py \
-  traces/qwen-teacher/trajectories.jsonl \
-  outputs/ouro-train.jsonl \
+  traces/source-model/trajectories.jsonl \
+  outputs/training-data.jsonl \
   --successful-only
 
-OURO_TRAINER=/path/to/train_ouro_tool_lora.py \
-bash scripts/train_ouro.sh outputs/ouro-train.jsonl outputs/ouro-adapter
+TRAINING_ENTRYPOINT=/path/to/train_lora.py \
+PYTHON=/path/to/venv/bin/python \
+bash scripts/train_adapter.sh outputs/training-data.jsonl outputs/target-adapter
 ```
 
 ## View traces in MLflow
@@ -129,7 +130,7 @@ In another terminal, export the traces:
 
 ```bash
 uv run --with mlflow python scripts/export_mlflow.py \
-  traces/qwen-teacher/trajectories.jsonl \
+  traces/source-model/trajectories.jsonl \
   --tracking-uri http://127.0.0.1:5000 \
   --experiment pi-trajectory-recorder \
   --raw-artifact
