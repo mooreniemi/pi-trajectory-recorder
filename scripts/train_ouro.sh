@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
-JLENS_ROOT=${JLENS_ROOT:?Set JLENS_ROOT to the jlens repository}
+OURO_TRAINER=${OURO_TRAINER:?Set OURO_TRAINER to your Ouro training script}
 DATASET=${1:?Usage: train_ouro.sh DATASET.jsonl OUTPUT_DIR}
 OUTPUT=${2:?Usage: train_ouro.sh DATASET.jsonl OUTPUT_DIR}
 DATASET_ABS=$(realpath "$DATASET")
@@ -10,5 +10,5 @@ MAX_SAMPLES=${MAX_SAMPLES:-0}
 MAX_LENGTH=${MAX_LENGTH:-1024}
 EPOCHS=${EPOCHS:-1}
 SEED=${SEED:-42}
-cd "$JLENS_ROOT"
-uv run --group dev python scripts/train_ouro_tool_lora.py --mode "$MODE" --dataset "$DATASET_ABS" --max-samples "$MAX_SAMPLES" --max-length "$MAX_LENGTH" --epochs "$EPOCHS" --seed "$SEED" --output-dir "$OUTPUT_ABS"
+TRAINER_ABS=$(realpath "$OURO_TRAINER")
+uv run python "$TRAINER_ABS" --mode "$MODE" --dataset "$DATASET_ABS" --max-samples "$MAX_SAMPLES" --max-length "$MAX_LENGTH" --epochs "$EPOCHS" --seed "$SEED" --output-dir "$OUTPUT_ABS"

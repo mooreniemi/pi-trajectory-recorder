@@ -6,3 +6,6 @@ outputs/
 .DS_Store
 __pycache__/
 *.py[cod]
+mlflow.db
+mlartifacts/
+mlruns/

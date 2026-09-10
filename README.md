@@ -109,9 +109,39 @@ python3 scripts/normalize_traces.py \
   outputs/ouro-train.jsonl \
   --successful-only
 
-JLENS_ROOT=/path/to/jacobian-lens \
+OURO_TRAINER=/path/to/train_ouro_tool_lora.py \
 bash scripts/train_ouro.sh outputs/ouro-train.jsonl outputs/ouro-adapter
 ```
+
+## View traces in MLflow
+
+The recorder JSONL remains the lossless source of truth. To browse trajectories in MLflow, start a local MLflow server with a SQL backend, then export the reviewed JSONL as nested agent/tool traces:
+
+```bash
+mkdir -p mlartifacts
+uv run --with mlflow mlflow server \
+  --host 127.0.0.1 --port 5000 \
+  --backend-store-uri sqlite:///mlflow.db \
+  --default-artifact-root ./mlartifacts
+```
+
+In another terminal, export the traces:
+
+```bash
+uv run --with mlflow python scripts/export_mlflow.py \
+  traces/qwen-teacher/trajectories.jsonl \
+  --tracking-uri http://127.0.0.1:5000 \
+  --experiment pi-trajectory-recorder \
+  --raw-artifact
+```
+
+Then open `http://127.0.0.1:5000` locally, or use SSH port forwarding from your workstation:
+
+```bash
+ssh -L 5000:127.0.0.1:5000 user@host
+```
+
+Each trajectory appears as an MLflow agent trace with nested `TOOL` spans, model metadata, tool counts, error counts, and the final answer. MLflow tracing is OpenTelemetry-compatible; this exporter uses MLflow’s Python tracing API rather than making the recorder depend on MLflow at runtime.
 
 ## Results and milestones
 
