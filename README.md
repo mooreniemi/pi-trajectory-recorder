@@ -43,6 +43,30 @@ The normalizer converts that trajectory into a chat-training record suitable for
 
 Errors and retries remain visible in the raw record so they can be filtered or deliberately included as recovery examples.
 
+## End-to-end workflow
+
+The training data is produced by running an evaluation or task dataset through Pi with a capable teacher model. The dataset supplies realistic prompts; Pi supplies the tool environment; and this extension records what actually happened. The recorder does not invent tool calls or turn static answers into trajectories.
+
+```text
+eval/task prompts
+        │
+        ▼
+Pi + teacher model + configured tools
+        │  model chooses tools, receives results, retries, answers
+        ▼
+redacted trajectories.jsonl
+        │
+        ├─ review_traces.py       inspect/filter/label successes and failures
+        ├─ normalize_traces.py    convert approved traces to chat JSONL
+        ▼
+Ouro SFT/QLoRA training
+        │
+        ▼
+Pi/tool-use benchmark: base vs trained model
+```
+
+A typical experiment is: (1) run the benchmark prompts with a teacher such as Qwen in Pi, (2) review the resulting traces and remove private or undesirable examples, (3) export the approved traces as training data, (4) train an Ouro adapter, and (5) rerun a held-out benchmark to measure tool selection, argument validity, sequencing, recovery, and final task success. The benchmark runner in this repository is a prompt-and-trace harness; the configured Pi tools and task fixtures determine how realistic and reproducible the resulting evaluation is.
+
 ## Install locally
 
 From this repository:
