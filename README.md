@@ -4,14 +4,14 @@ An opt-in Pi extension for collecting redacted agent trajectories as training da
 
 ## What it records
 
-The recorder captures prompts, system context, model/session metadata, tool calls, tool results, errors, and final messages. Recording is opt-in and defaults off. Secrets and home-directory paths are redacted; review data before sharing.
+The recorder captures prompts, system context, model/session metadata, tool calls, tool results, errors, and final messages. Recording is opt-in and defaults off. Common secrets and local home-directory paths are redacted by default; review every export before sharing.
 
 ## Install locally
 
 From this repository:
 
 ```bash
-cd /home/alex/Code/pi-trajectory-recorder
+cd pi-trajectory-recorder
 npm install
 PI_TRAJECTORY_RECORD=1 \
 PI_TRAJECTORY_DIR=$PWD/traces \
@@ -48,7 +48,7 @@ python3 scripts/normalize_traces.py \
   outputs/ouro-train.jsonl \
   --successful-only
 
-JLENS_ROOT=/home/alex/Code/jlens/jacobian-lens \
+JLENS_ROOT=/path/to/jacobian-lens \
 bash scripts/train_ouro.sh outputs/ouro-train.jsonl outputs/ouro-adapter
 ```
 
@@ -60,4 +60,4 @@ Send a readable result table through Moneypenny with:
 bash scripts/notify_milestone.sh "Pi teacher benchmark" "Model | Task success\nQwen | 80%"
 ```
 
-This project intentionally does not upload traces automatically. Review and redact before publishing.
+This project intentionally does not upload traces automatically. Treat traces as sensitive: review and redact every export before publishing, because application-specific secrets or personal data may use formats the built-in redactor cannot recognize.

@@ -18,7 +18,7 @@ function redactText(value: string): string {
   return value
     .replace(/(?:sk|rk)-[A-Za-z0-9_-]{12,}/g, "[REDACTED_KEY]")
     .replace(/(?:api[_-]?key|token|secret|password)\s*[:=]\s*[^\s,;]+/gi, "$1=[REDACTED]")
-    .replace(/\/home\/[^\s\"']+/g, "[HOME_PATH]")
+    .replace(/(?:\/home\/|\/Users\/|\/root\/)[^\s\"']+/g, "[HOME_PATH]")
     .slice(0, maxText);
 }
 
